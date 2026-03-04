@@ -425,3 +425,21 @@ export function calcMuvvProjection(
     totalPlatform: lightFees + heavyFees + zpeFees + serviceFees,
   }
 }
+// Adicione isso ao final do seu arquivo calculations.ts
+export const SERVICE_COSTS = {
+  insurance: 25.00,
+  tracking: 15.00,
+  lockMonitor: 35.00
+};
+
+export const SERVICE_LABELS = {
+  insurance: '🛡️ Seguro Muvv Gold',
+  tracking: '📍 Rastreamento Real-time',
+  lockMonitor: '🔒 Monitoramento de Trava'
+};
+
+export const DEFAULT_DEMAND: DemandFactors = {
+  urgency: 'normal',
+  season: 'normal',
+  availability: 'normal'
+};
