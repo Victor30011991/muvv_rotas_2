@@ -101,9 +101,10 @@ export function calcEstadia(config: EstadiaConfig, category: FreightCategory): n
 // ─────────────────────────────────────────────────────────────────────────────
 export function calcServicesTotal(services?: AdditionalServices): number {
   if (!services) return 0
-  return (Object.keys(services) as (keyof AdditionalServices)[])
+  const keys = Object.keys(services) as (keyof AdditionalServices)[]
+  return keys
     .filter(k => services[k])
-    .reduce((sum, k) => sum + SERVICE_COSTS[k], 0)
+    .reduce((sum: number, k: keyof AdditionalServices) => sum + SERVICE_COSTS[k], 0)
 }
 
 export function calcNet(
@@ -385,7 +386,8 @@ export function buildCheckMuvv(params: {
 // SIMULAÇÕES (mantidas da v2.3)
 // ─────────────────────────────────────────────────────────────────────────────
 function periodMultiplier(period: SimPeriod): number {
-  return { daily: 1, weekly: 7, monthly: 30, yearly: 365 }[period]
+  const map: Record<SimPeriod, number> = { daily: 1, weekly: 7, monthly: 30, yearly: 365 }
+  return map[period]
 }
 
 export function calcSimProjection(
@@ -425,21 +427,3 @@ export function calcMuvvProjection(
     totalPlatform: lightFees + heavyFees + zpeFees + serviceFees,
   }
 }
-// Adicione isso ao final do seu arquivo calculations.ts
-export const SERVICE_COSTS = {
-  insurance: 25.00,
-  tracking: 15.00,
-  lockMonitor: 35.00
-};
-
-export const SERVICE_LABELS = {
-  insurance: '🛡️ Seguro Muvv Gold',
-  tracking: '📍 Rastreamento Real-time',
-  lockMonitor: '🔒 Monitoramento de Trava'
-};
-
-export const DEFAULT_DEMAND: DemandFactors = {
-  urgency: 'normal',
-  season: 'normal',
-  availability: 'normal'
-};

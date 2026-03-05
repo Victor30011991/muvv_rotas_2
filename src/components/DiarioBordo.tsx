@@ -251,7 +251,7 @@ export function DiarioBordo() {
             </div>
           ) : (
             <div className="px-4 pb-2">
-              {stats.records.slice().reverse().map(r => (
+              {stats.records.slice().reverse().map((r: FreightRecord) => (
                 <FreightRow key={r.id} record={r} />
               ))}
             </div>

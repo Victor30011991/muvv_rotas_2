@@ -191,7 +191,7 @@ function AddressPanel({
                         pinColor={color}
                         pinLabel={label}
                         confirmedAddress={slots[i]?.address}
-                        onSelect={wp => onSelect(i, wp)}
+                        onSelect={(wp: RouteWaypoint) => onSelect(i, wp)}
                         onClear={() => onSelect(i, null)}
                       />
                     </div>
@@ -437,7 +437,7 @@ function FreightPanel(p: FreightPanelProps) {
         <div className="bg-muvv-primary rounded-xl p-2 space-y-1.5 animate-fade-in">
           {(Object.keys(services) as (keyof AdditionalServices)[]).map(key => (
             <button
-              key={key}
+              key={key as string}
               onClick={() => onToggleService(key)}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer border-none transition-all ${
                 services[key]
@@ -610,11 +610,11 @@ export function HomeScreen({ onOrderDetail }: Props) {
   }, [])
 
   const toggleService = useCallback((key: keyof AdditionalServices) => {
-    setServices(prev => ({ ...prev, [key]: !prev[key] }))
+    setServices((prev: AdditionalServices) => ({ ...prev, [key]: !prev[key] }))
   }, [])
 
   const setCubageField = useCallback((field: keyof CubageData, val: number) => {
-    setCubage(prev => ({ ...prev, [field]: val }))
+    setCubage((prev: CubageData) => ({ ...prev, [field]: val }))
   }, [])
 
   const handleSimApply = useCallback((

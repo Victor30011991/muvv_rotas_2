@@ -8,7 +8,6 @@ import type { FreightCategory, SimPeriod } from '@/types'
 interface Props { 
   initialGross: number; 
   initialCategory: FreightCategory;
-  precomputedNet?: number; 
 }
 
 const PERIODS: { id: SimPeriod; label: string }[] = [
@@ -18,7 +17,7 @@ const PERIODS: { id: SimPeriod; label: string }[] = [
   { id: 'yearly',  label: 'Ano'    },
 ]
 
-export function EarningsSimulator({ initialGross, initialCategory, precomputedNet }: Props) {
+export function EarningsSimulator({ initialGross, initialCategory }: Props) {
   // ── ESTADOS INTERNOS ──────────────────────────────────────────────────────
   const [open,     setOpen]     = useState(false)
   const [period,   setPeriod]   = useState<SimPeriod>('weekly')

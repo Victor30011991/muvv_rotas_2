@@ -258,8 +258,8 @@ export function OrderDetailScreen({ freight }: Props) {
           <div className="space-y-2">
             {(Object.keys(services) as (keyof AdditionalServices)[]).map(key => (
               <button
-                key={key}
-                onClick={() => setServices(prev => ({ ...prev, [key]: !prev[key] }))}
+                key={key as string}
+                onClick={() => setServices((prev: AdditionalServices) => ({ ...prev, [key]: !prev[key] }))}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer border-2 transition-all ${
                   services[key]
                     ? 'bg-muvv-accent-light border-muvv-accent/30'

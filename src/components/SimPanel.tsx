@@ -107,7 +107,7 @@ export function SimPanel({ defaultCategory = 'heavy', osrmKm = 0, onApply }: Sim
   }, [simKm, cubage, estadia, onApply])
 
   const setCubageField = useCallback((field: keyof CubageData, val: number) => {
-    setCubage(prev => ({ ...prev, [field]: val }))
+    setCubage((prev: CubageData) => ({ ...prev, [field]: val }))
   }, [])
 
   // ── Conteúdo interno do painel ──────────────────────────────────────────────
@@ -249,13 +249,13 @@ export function SimPanel({ defaultCategory = 'heavy', osrmKm = 0, onApply }: Sim
               <NumField
                 label="Minutos aguardados"
                 value={estadia.waitMinutes}
-                onChange={v => setEstadia(prev => ({ ...prev, waitMinutes: v }))}
+                onChange={v => setEstadia((prev: EstadiaConfig) => ({ ...prev, waitMinutes: v }))}
                 unit="min" step={15}
               />
               <NumField
                 label="Franquia gratuita"
                 value={estadia.franchiseMinutes}
-                onChange={v => setEstadia(prev => ({ ...prev, franchiseMinutes: v }))}
+                onChange={v => setEstadia((prev: EstadiaConfig) => ({ ...prev, franchiseMinutes: v }))}
                 unit="min" step={15}
               />
             </div>

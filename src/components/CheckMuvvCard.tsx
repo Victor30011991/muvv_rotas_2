@@ -2,9 +2,8 @@
 // Exibe o perfil Check-Muvv do motorista com badge de segurança,
 // status ANTT, RADAR ZPE e score composto.
 
-import { useMemo } from 'react'
 import { Icon, ICON_PATHS } from '@/components/Icon'
-import { buildCheckMuvv, calcSafetyScore, calcSafetyBadge, formatBRL } from '@/utils/calculations'
+import { buildCheckMuvv } from '@/utils/calculations'
 import type { CheckMuvv, SafetyBadge, AnttStatus } from '@/types'
 import { SAFETY_BADGE_LABELS, SAFETY_BADGE_COLORS } from '@/types'
 
@@ -22,11 +21,12 @@ const MOCK_DRIVER: CheckMuvv = buildCheckMuvv({
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
 function AnttBadge({ status }: { status: AnttStatus }) {
-  const cfg = {
+  const cfgMap = {
     valid:         { label: '✅ ANTT Válida',         bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200' },
     expiring_soon: { label: '⏳ Vence em 60 dias',    bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200' },
     expired:       { label: '❌ ANTT Vencida',        bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200'   },
-  }[status]
+  } as const
+  const cfg = cfgMap[status]
   return (
     <div className={`px-3 py-1.5 rounded-lg border text-[11px] font-semibold ${cfg.bg} ${cfg.text} ${cfg.border}`}>
       {cfg.label}
@@ -35,11 +35,12 @@ function AnttBadge({ status }: { status: AnttStatus }) {
 }
 
 function RadarBadge({ status }: { status: CheckMuvv['radarStatus'] }) {
-  const cfg = {
+  const cfgMap = {
     cleared: { label: '🛃 RADAR Liberado',    bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200' },
     pending: { label: '⏳ RADAR Pendente',    bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200' },
     blocked: { label: '🚫 RADAR Bloqueado',   bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200'   },
-  }[status]
+  } as const
+  const cfg = cfgMap[status]
   return (
     <div className={`px-3 py-1.5 rounded-lg border text-[11px] font-semibold ${cfg.bg} ${cfg.text} ${cfg.border}`}>
       {cfg.label}
