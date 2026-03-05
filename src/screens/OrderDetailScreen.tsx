@@ -1,4 +1,4 @@
-// ─── OrderDetailScreen v3.0.0 — Performance Total ────────────────────────────
+// ─── OrderDetailScreen v3.0.1 — BUG 2 Fix: recálculo ao trocar categoria ─────
 //
 // OTIMIZAÇÕES v3:
 //  1. `derived` — único useMemo central que recalcula TUDO (gross/fee/net/tax)
@@ -13,8 +13,20 @@
 //  5. Redução de useMemo isolados: multiplier, baseGross, routeWps e destState
 //     permanecem separados pois dependem de inputs diferentes, mas os cálculos
 //     financeiros foram todos colapsados em `derived`.
+//
+// CORREÇÃO BUG 2 v3.0.1:
+//  CAUSA RAIZ: `grossInput` era inicializado de `freight.value` (valor fixo)
+//  e nunca recalculado ao trocar categoria. Como MUVV_RATES é 0.12 para todas
+//  as categorias, `derived.fee` e `derived.net` permaneciam idênticos
+//  independente da categoria selecionada — o valor exibido não mudava.
+//
+//  FIX: useEffect que observa [category] e recalcula `grossInput` via
+//  calcFreightFromKm(freight.distanceKm, category) quando distanceKm > 0.
+//  Isso garante que o gross base mude corretamente ao trocar entre Ligeiro
+//  (R$50 + R$3,50/km), Pesado (R$150 + R$5,50/km) e ZPE (R$150 + R$2,80/km).
+//  Nenhuma fórmula foi alterada — apenas o gatilho de recálculo foi corrigido.
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Icon, ICON_PATHS }  from '@/components/Icon'
 import { EarningsSimulator } from '@/components/EarningsSimulator'
 import { RouteMap }          from '@/components/RouteMap'
@@ -24,6 +36,7 @@ import {
   calcNet, brlToEur, formatBRL, formatEUR,
   MUVV_RATES, CATEGORY_LABELS, CATEGORY_ICON,
   applyDynamicMultiplier, calcDynamicMultiplier,
+  calcFreightFromKm,
 } from '@/utils/calculations'
 import { SERVICE_COSTS, SERVICE_LABELS, DEFAULT_DEMAND } from '@/types'
 import type {
@@ -48,6 +61,19 @@ export function OrderDetailScreen({ freight }: Props) {
     freight?.services ?? { insurance: false, tracking: false, lockMonitor: false }
   )
   const [demand, setDemand] = useState<DemandFactors>(DEFAULT_DEMAND)
+
+  // ── BUG 2 FIX: recalcula grossInput quando categoria muda ─────────────────
+  // Garante que ao trocar entre Ligeiro/Pesado/ZPE o valor exibido atualize
+  // corretamente, usando as tarifas base distintas de cada categoria:
+  //   Ligeiro → R$50 fixo + R$3,50/km extra
+  //   Pesado  → R$150 fixo + R$5,50/km extra
+  //   ZPE     → R$150 fixo + R$2,80/km extra
+  // NÃO altera a fórmula — apenas aciona o recálculo com a categoria correta.
+  useEffect(() => {
+    if (freight?.distanceKm && freight.distanceKm > 0) {
+      setGrossInput(calcFreightFromKm(freight.distanceKm, category))
+    }
+  }, [category, freight?.distanceKm])
 
   // ── Waypoints e estado de destino (independentes de categoria/gross) ───────
   const routeWps = useMemo((): RouteWaypoint[] => {

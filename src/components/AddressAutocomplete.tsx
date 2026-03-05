@@ -1,6 +1,6 @@
-// ─── AddressAutocomplete — FIXED v2.3 ────────────────────────────────────────
+// ─── AddressAutocomplete — FIXED v2.4 ────────────────────────────────────────
 //
-// CORREÇÃO CRÍTICA — "Clique no endereço não preenche o campo":
+// CORREÇÃO CRÍTICA v2.3 — "Clique no endereço não preenche o campo":
 //
 //   CAUSA RAIZ: O dropdown usa position:fixed e fica FORA do containerRef
 //   no DOM. O listener document.mousedown verificava:
@@ -14,7 +14,24 @@
 //   2. onMouseDown + e.preventDefault() nos botões: dispara ANTES do blur
 //      do input, garantindo execução antes de qualquer desmontagem.
 //
+// CORREÇÃO BUG DESKTOP v2.4 — "Lista de sugestões não aparece no desktop":
+//
+//   CAUSA RAIZ: O componente pai (AddressPanel) usa a classe `glass` que
+//   aplica `backdrop-filter: blur(16px)`. Em navegadores modernos (Chrome,
+//   Edge), backdrop-filter cria um "containing block" para elementos
+//   position:fixed descendentes. O dropdown (position:fixed) passa a ser
+//   posicionado relativamente ao container glass — que está dentro da
+//   sidebar com overflow-y:auto — e fica cortado/invisível.
+//   No mobile funciona porque a cadeia de containers não tem overflow:hidden
+//   ou overflow-y:auto acima do glass container.
+//
+//   SOLUÇÃO: ReactDOM.createPortal renderiza o dropdown diretamente em
+//   document.body, saindo completamente de qualquer cadeia de containing
+//   blocks, overflow e stacking contexts dos containers pai.
+//   Nenhuma lógica, fórmula ou layout foi alterado.
+//
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import type { NominatimResult, RouteWaypoint } from '@/types'
 import { Icon, ICON_PATHS } from '@/components/Icon'
 
@@ -74,7 +91,7 @@ export function AddressAutocomplete({
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef     = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const portalRef    = useRef<HTMLDivElement>(null)  // FIX 1
+  const portalRef    = useRef<HTMLDivElement>(null)  // FIX v2.3
 
   const updateDropPos = useCallback(() => {
     const el = containerRef.current
@@ -83,7 +100,7 @@ export function AddressAutocomplete({
     setDropRect({ top: r.bottom + 6, left: r.left, width: r.width })
   }, [])
 
-  // FIX 1: exclui cliques no portal do gatilho de fechar
+  // FIX v2.3: exclui cliques no portal do gatilho de fechar
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target       = e.target as Node
@@ -128,7 +145,7 @@ export function AddressAutocomplete({
     debounceRef.current = setTimeout(() => runSearch(val), 400)
   }, [runSearch])
 
-  // FIX: preenche campo, fecha dropdown, dispara onSelect com objeto completo
+  // FIX v2.3: preenche campo, fecha dropdown, dispara onSelect com objeto completo
   const handleSelect = useCallback((r: NominatimResult) => {
     const address = formatAddress(r)
     setQuery(address)
@@ -172,6 +189,64 @@ export function AddressAutocomplete({
   }, [open, suggs, activeIdx, handleSelect])
 
   const isFocused = open || (!confirmed && query.length > 0)
+
+  // ── Conteúdo do dropdown (reutilizado no portal) ───────────────────────────
+  const dropdownContent = (
+    <div
+      ref={portalRef}
+      role="listbox"
+      style={{
+        position: 'fixed',
+        top:      dropRect?.top ?? 0,
+        left:     dropRect?.left ?? 0,
+        width:    Math.max(dropRect?.width ?? 0, 280),
+        zIndex:   99999,
+      }}
+      className="bg-white rounded-2xl shadow-freight border border-muvv-border overflow-hidden animate-fade-in"
+    >
+      {suggs.length > 0
+        ? suggs.map((s, i) => {
+            const addr = formatAddress(s)
+            const sub  = [
+              s.address.city ?? s.address.town ?? s.address.village,
+              s.address.state,
+            ].filter(Boolean).join(' · ')
+            return (
+              <button
+                key={s.place_id}
+                role="option"
+                aria-selected={i === activeIdx}
+                // FIX v2.3: onMouseDown + preventDefault = dispara ANTES
+                // do blur fechar o portal. onClick chegaria tarde.
+                onMouseDown={e => {
+                  e.preventDefault()
+                  handleSelect(s)
+                }}
+                className={[
+                  'w-full flex items-start gap-3 px-4 py-3',
+                  'text-left cursor-pointer border-none transition-colors',
+                  i < suggs.length - 1 ? 'border-b border-muvv-border' : '',
+                  i === activeIdx ? 'bg-muvv-accent-light' : 'bg-white hover:bg-muvv-primary',
+                ].join(' ')}
+              >
+                <div className="w-8 h-8 rounded-xl bg-muvv-primary flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icon path={ICON_PATHS.locate} size={14} color="#57A6C1" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-muvv-dark text-sm font-semibold leading-snug">{addr}</p>
+                  {sub && <p className="text-muvv-muted text-[11px] mt-0.5">{sub}</p>}
+                </div>
+              </button>
+            )
+          })
+        : !loading && query.length >= 3 && (
+            <div className="px-4 py-3 text-muvv-muted text-sm text-center">
+              Nenhum endereço encontrado
+            </div>
+          )
+      }
+    </div>
+  )
 
   return (
     <>
@@ -224,64 +299,13 @@ export function AddressAutocomplete({
         </div>
       </div>
 
-      {/* ── Dropdown portal (position:fixed) ──────────────────────────── */}
-      {/* FIX: ref={portalRef} + onMouseDown nas sugestões                */}
-      {open && dropRect && (
-        <div
-          ref={portalRef}
-          role="listbox"
-          style={{
-            position: 'fixed',
-            top:      dropRect.top,
-            left:     dropRect.left,
-            width:    Math.max(dropRect.width, 280),
-            zIndex:   99999,
-          }}
-          className="bg-white rounded-2xl shadow-freight border border-muvv-border overflow-hidden animate-fade-in"
-        >
-          {suggs.length > 0
-            ? suggs.map((s, i) => {
-                const addr = formatAddress(s)
-                const sub  = [
-                  s.address.city ?? s.address.town ?? s.address.village,
-                  s.address.state,
-                ].filter(Boolean).join(' · ')
-                return (
-                  <button
-                    key={s.place_id}
-                    role="option"
-                    aria-selected={i === activeIdx}
-                    // FIX 2: onMouseDown + preventDefault = dispara ANTES
-                    // do blur fechar o portal. onClick chegaria tarde.
-                    onMouseDown={e => {
-                      e.preventDefault()
-                      handleSelect(s)
-                    }}
-                    className={[
-                      'w-full flex items-start gap-3 px-4 py-3',
-                      'text-left cursor-pointer border-none transition-colors',
-                      i < suggs.length - 1 ? 'border-b border-muvv-border' : '',
-                      i === activeIdx ? 'bg-muvv-accent-light' : 'bg-white hover:bg-muvv-primary',
-                    ].join(' ')}
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-muvv-primary flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Icon path={ICON_PATHS.locate} size={14} color="#57A6C1" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-muvv-dark text-sm font-semibold leading-snug">{addr}</p>
-                      {sub && <p className="text-muvv-muted text-[11px] mt-0.5">{sub}</p>}
-                    </div>
-                  </button>
-                )
-              })
-            : !loading && query.length >= 3 && (
-                <div className="px-4 py-3 text-muvv-muted text-sm text-center">
-                  Nenhum endereço encontrado
-                </div>
-              )
-          }
-        </div>
-      )}
+      {/* ── Dropdown via createPortal → renderizado em document.body ──────
+          FIX v2.4: createPortal elimina o problema de backdrop-filter
+          criando containing block para position:fixed no desktop.
+          O dropdown escapa de toda hierarquia de overflow e stacking
+          contexts dos containers pai, aparecendo corretamente sobre
+          qualquer elemento em mobile E desktop.                        */}
+      {open && dropRect && createPortal(dropdownContent, document.body)}
     </>
   )
 }
